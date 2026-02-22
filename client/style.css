@@ -1,0 +1,407 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Brand Colors */
+    --primary: #2563eb;       /* Royal Blue */
+    --primary-light: #3b82f6;
+    --primary-dark: #1d4ed8;
+    --secondary: #0ea5e9;     /* Sky Blue */
+    --accent: #f43f5e;        /* Soft Red */
+    
+    /* Neutral Colors */
+    --bg-body: #f8fafc;
+    --bg-surface: #ffffff;
+    --text-main: #0f172a;     /* Slate 900 */
+    --text-secondary: #64748b; /* Slate 500 */
+    --text-light: #94a3b8;    /* Slate 400 */
+    --border-color: #e2e8f0;  /* Slate 200 */
+
+    /* Status Colors */
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+
+    /* Shadows & Glass */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-blur: blur(12px);
+
+    /* Dimensions */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --header-height: 80px;
+}
+
+/* --- Global Reset & Typography --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at top left, #eff6ff, #f8fafc);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-main);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+}
+
+button {
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+}
+
+/* --- Layout Wrappers --- */
+header {
+    height: var(--header-height);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5%;
+    box-shadow: var(--shadow-sm);
+}
+
+main {
+    padding: 2rem 5%;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: calc(100vh - var(--header-height) - 100px); /* Adjust for footer */
+}
+
+/* --- Branding --- */
+.logo {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logo::before {
+    content: '+';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 1.2rem;
+}
+
+.logo.admin::before {
+    background: var(--danger);
+}
+
+/* --- Navigation --- */
+nav {
+    display: flex;
+    gap: 0.5rem;
+}
+
+nav a {
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+nav a:hover {
+    background: rgba(37, 99, 235, 0.05);
+    color: var(--primary);
+}
+
+nav a.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    border: none;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* --- Glass Cards --- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow-md);
+    padding: 2rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-card:hover {
+    box-shadow: var(--shadow-lg);
+    /* transform: translateY(-4px);  removed generic hover lift to avoid jerky tables/forms */
+}
+
+/* Add specific hover for interactive cards only */
+.interactive-card:hover {
+    transform: translateY(-4px);
+}
+
+/* --- Hero Section --- */
+.hero {
+    text-align: center;
+    padding: 6rem 1rem;
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0) 0%, rgba(239, 246, 255, 1) 100%);
+    border-radius: var(--radius-xl);
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.hero h2 {
+    font-size: 3.5rem;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(to right, var(--primary-dark), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+}
+
+/* --- Forms --- */
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+input, select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-body);
+    font-size: 1rem;
+    color: var(--text-main);
+    transition: all 0.2s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background: white;
+}
+
+/* --- Grid Layouts --- */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+/* --- Tables --- */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 1rem;
+}
+
+th {
+    text-align: left;
+    padding: 1rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+}
+
+td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background: rgba(248, 250, 252, 0.5);
+}
+
+/* --- Status Badges --- */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-pending { background: #fff7ed; color: #c2410c; }
+.status-confirmed { background: #ecfdf5; color: #047857; }
+.status-cancelled { background: #fef2f2; color: #b91c1c; }
+.status-paid { background: #eff6ff; color: #1d4ed8; }
+
+/* --- Modals --- */
+#login-modal, #add-doctor-modal {
+    backdrop-filter: blur(8px);
+    background: rgba(15, 23, 42, 0.4) !important; /* Override inline style */
+    transition: opacity 0.3s ease;
+}
+
+/* Center modal content properly if not flex */
+#login-modal > div, #add-doctor-modal > div {
+    animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Login Page Specific --- */
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 3rem 2.5rem;
+    /* background: white;  Removed to use glass effect */
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.login-header p {
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    .hero h2 { font-size: 2.5rem; }
+    
+    header {
+        padding: 0 1rem;
+    }
+    
+    nav a {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .grid-container {
+        grid-template-columns: 1fr;
+    }
+    
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+/* --- Facilities Section --- */
+.facility-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.facility-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.facility-card:hover .facility-img {
+    transform: scale(1.05);
+}
+
+/* --- Services Section --- */
+.glass-card h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Access - MedCare</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="script.js"></script>
+</head>
+<body class="login-page" data-role="admin">
+
+    <div class="glass-card login-card">
+        <div class="login-header">
+            <h1 class="logo">MedCare+</h1>
+            <p>Administration Portal</p>
+        </div>
+        
+        <h3 id="modal-title">Login</h3>
+        
+        <form id="auth-form">
+            <div class="form-group" id="name-group" style="display: none;">
+                <label>Full Name</label>
+                <input type="text" id="name" placeholder="Admin Name">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required placeholder="admin@medcare.com" value="admin@medcare.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required placeholder="******" value="admin123">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;" id="submit-btn">Login</button>
+            
+            <p style="text-align: center; margin-top: 1rem; font-size: 0.9rem;">
+                <span id="switch-text">New admin? </span>
+                <a href="#" id="switch-auth" style="color: var(--primary);">Register here (Create Account First)</a>
+            </p>
+        </form>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="index.html" style="text-decoration: none; color: var(--text-secondary); font-size: 0.9rem;">&larr; Back to Home</a>
+        </div>
+    </div>
+
+</body>
+</html>
