@@ -37,6 +37,11 @@
     --radius-lg: 16px;
     --radius-xl: 24px;
     --header-height: 80px;
+
+    /* Neon Glows */
+    --neon-blue: 0 0 10px rgba(37, 99, 235, 0.5), 0 0 20px rgba(37, 99, 235, 0.3);
+    --neon-sky: 0 0 10px rgba(14, 165, 233, 0.5), 0 0 20px rgba(14, 165, 233, 0.3);
+    --neon-border: 1px solid rgba(14, 165, 233, 0.6);
 }
 
 /* --- Global Reset & Typography --- */
@@ -137,17 +142,19 @@ nav a {
     color: var(--text-secondary);
     font-weight: 500;
     font-size: 0.95rem;
+    transition: all 0.3s ease;
 }
 
 nav a:hover {
     background: rgba(37, 99, 235, 0.05);
     color: var(--primary);
+    text-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
 }
 
 nav a.active {
     background: var(--primary);
     color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    box-shadow: var(--neon-blue);
 }
 
 /* --- Buttons --- */
@@ -159,7 +166,7 @@ nav a.active {
     border-radius: var(--radius-md);
     font-weight: 500;
     border: none;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     font-size: 0.95rem;
 }
 
@@ -171,7 +178,7 @@ nav a.active {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 12px rgba(37, 99, 235, 0.3);
+    box-shadow: var(--neon-blue);
 }
 
 .btn-primary:active {
@@ -187,19 +194,20 @@ nav a.active {
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: var(--shadow-md);
     padding: 2rem;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     position: relative;
     overflow: hidden;
 }
 
 .glass-card:hover {
     box-shadow: var(--shadow-lg);
-    /* transform: translateY(-4px);  removed generic hover lift to avoid jerky tables/forms */
 }
 
 /* Add specific hover for interactive cards only */
 .interactive-card:hover {
     transform: translateY(-4px);
+    box-shadow: var(--neon-sky);
+    border: var(--neon-border);
 }
 
 /* --- Hero Section --- */
@@ -250,13 +258,13 @@ input, select {
     background: var(--bg-body);
     font-size: 1rem;
     color: var(--text-main);
-    transition: all 0.2s;
+    transition: all 0.3s;
 }
 
 input:focus, select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.3), 0 0 5px rgba(37, 99, 235, 0.1);
     background: white;
 }
 

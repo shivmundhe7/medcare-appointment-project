@@ -256,7 +256,11 @@ function setupAuthForm() {
                 }
             } catch (error) {
                 console.error(error);
-                alert(error.message);
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                    alert("Account not found. Please register first.");
+                } else {
+                    alert(error.message);
+                }
             }
         });
     }
@@ -432,7 +436,7 @@ async function loadPatientDashboard() {
 
         // Proceed to Payment
         const options = {
-            "key": "rzp_test_SIiVGYqVgw9cr8", // Updated Key
+            "key": "rzp_test_SSfp12Cb8nW2sO",
             "amount": fee * 100, // Amount in paise
             "currency": "INR",
             "name": "MedCare Hospital",
