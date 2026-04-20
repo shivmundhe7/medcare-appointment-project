@@ -464,51 +464,90 @@ async function loadPatientDashboard() {
             }
 
             // Proceed to Payment
-            const options = {
-                "key": "rzp_test_SSfp12Cb8nW2sO",
-                "amount": fee * 100, // Amount in paise
-                "currency": "INR",
-                "name": "MedCare Hospital",
-                "description": "Consultation Fee",
-                "handler": async function (response) {
-                    // Payment Success - Book Appointment
-                    try {
-                        await addDoc(collection(db, "appointments"), {
-                            patientId: currentUser.uid,
-                            patientName: currentUser.displayName || currentUser.email.split('@')[0],
-                            mobile: userMobile,
-                            doctorId: doctorId,
-                            doctorName: select.options[select.selectedIndex].text.split(' (')[0].replace('Dr. ', ''),
-                            date: document.getElementById('date').value,
-                            time: document.getElementById('time').value,
-                            status: 'pending',
-                            paymentId: response.razorpay_payment_id,
-                            paymentStatus: 'paid',
-                            fee: fee,
-                            createdAt: new Date().toISOString()
-                        });
-                        
-                        alert("Payment Successful! Appointment Booked.");
-                        window.location.reload();
-                    } catch (error) {
-                        handleFirestoreError(error, "Booking Appointment");
-                    }
-                },
-                "prefill": {
-                    "name": currentUser.displayName || currentUser.email.split('@')[0],
-                    "email": currentUser.email,
-                    "contact": userMobile
-                },
-                "theme": {
-                    "color": "#6e8efb"
+            try {
+                const response = await fetch('/api/payment/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: fee,
+                        currency: 'INR'
+                    })
+                });
+                
+                const orderData = await response.json();
+                
+                if (!orderData.id) {
+                    throw new Error("Failed to create order");
                 }
-            };
 
-            const rzp1 = new Razorpay(options);
-            rzp1.on('payment.failed', function (response){
-                    alert("Payment Failed: " + response.error.description);
-            });
-            rzp1.open();
+                const options = {
+                    "key": orderData.key_id,
+                    "amount": orderData.amount,
+                    "currency": orderData.currency,
+                    "name": "MedCare Hospital",
+                    "description": "Consultation Fee",
+                    "order_id": orderData.id,
+                    "handler": async function (response) {
+                        // Payment Success - Verify and Book
+                        try {
+                            const verifyRes = await fetch('/api/payment/verify-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+                            
+                            const verifyData = await verifyRes.json();
+                            
+                            if (verifyData.status === 'success') {
+                                await addDoc(collection(db, "appointments"), {
+                                    patientId: currentUser.uid,
+                                    patientName: currentUser.displayName || currentUser.email.split('@')[0],
+                                    mobile: userMobile,
+                                    doctorId: doctorId,
+                                    doctorName: select.options[select.selectedIndex].text.split(' (')[0].replace('Dr. ', ''),
+                                    date: document.getElementById('date').value,
+                                    time: document.getElementById('time').value,
+                                    status: 'pending',
+                                    paymentId: response.razorpay_payment_id,
+                                    paymentStatus: 'paid',
+                                    fee: fee,
+                                    createdAt: new Date().toISOString()
+                                });
+                                
+                                alert("Payment Successful! Appointment Booked.");
+                                window.location.reload();
+                            } else {
+                                alert("Payment verification failed. Please contact support.");
+                            }
+                        } catch (error) {
+                            console.error("Booking Error:", error);
+                            alert("Booking failed after payment. Contact support.");
+                        }
+                    },
+                    "prefill": {
+                        "name": currentUser.displayName || currentUser.email.split('@')[0],
+                        "email": currentUser.email,
+                        "contact": userMobile
+                    },
+                    "theme": {
+                        "color": "#6e8efb"
+                    }
+                };
+
+                const rzp1 = new Razorpay(options);
+                rzp1.on('payment.failed', function (response){
+                        alert("Payment Failed: " + response.error.description);
+                });
+                rzp1.open();
+                
+            } catch (error) {
+                console.error("Payment Initialization Error:", error);
+                alert("Failed to initialize payment: " + error.message);
+            }
         });
     } catch (e) {
         handleFirestoreError(e, "Patient Dashboard Init");
