@@ -41,6 +41,16 @@ const db = getFirestore(app);
 let currentUser = null;
 let userRole = null;
 
+// Error Handler Helper
+function handleFirestoreError(error, context) {
+    console.error(`Firestore Error [${context}]:`, error);
+    if (error.code === 'permission-denied') {
+        alert("Permission Denied: Please ensure your Firebase Firestore Security Rules are set to allow this operation. Check the console for details.");
+    } else {
+        alert(`Error: ${error.message}`);
+    }
+}
+
 // Initialize Page Immediately for Event Listeners
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -64,26 +74,29 @@ onAuthStateChanged(auth, async (user) => {
             if (userDoc.exists()) {
                 userRole = userDoc.data().role;
                 console.log("Role:", userRole);
-                
-                // Redirect based on role if on login page or root
-                if (path.endsWith('index.html') || path === '/' || path.endsWith('login.html') || path.endsWith('admin-login.html')) {
-                    // Auto Redirect to Dashboard
-                    if (userRole === 'admin') window.location.href = 'admin-dashboard.html';
-                    else window.location.href = 'dashboard.html';
-                }
-
-                // Protect Routes
-                const adminBypass = sessionStorage.getItem('admin_bypass');
-                if (path.includes('admin-dashboard') && userRole !== 'admin' && !adminBypass) window.location.href = 'index.html';
-                
-                // Init Page Logic
-                initPage();
             } else {
-                console.error("No user document found!");
+                console.warn("No user document found for UID:", user.uid);
+                // Default to patient if no doc found (might be first time login or permission error)
+                userRole = 'patient';
             }
         } catch (e) {
-            console.error("Error fetching user role:", e);
+            handleFirestoreError(e, "Fetching User Role");
+            // Default to patient on error to allow app to proceed
+            userRole = userRole || 'patient';
         }
+
+        // Perform Redirect after role is determined
+        if (path.endsWith('index.html') || path === '/' || path.endsWith('login.html') || path.endsWith('admin-login.html')) {
+            if (userRole === 'admin') window.location.href = 'admin-dashboard.html';
+            else window.location.href = 'dashboard.html';
+        }
+
+        // Protect Routes
+        const adminBypass = sessionStorage.getItem('admin_bypass');
+        if (path.includes('admin-dashboard') && userRole !== 'admin' && !adminBypass) window.location.href = 'index.html';
+        
+        // Init Page Logic
+        initPage();
     } else {
         // No user
         console.log("No user logged in");
@@ -242,24 +255,39 @@ function setupAuthForm() {
                     // Direct Login Logic
                     // Check if we are on the admin login page
                     if (window.location.href.includes('admin-login.html')) {
-                        // Hardcoded Admin Bypass for Demo
                         if (email === 'admin@medcare.com' && password === 'admin123') {
                             console.log("Admin Bypass Activated");
                             sessionStorage.setItem('admin_bypass', 'true');
                             window.location.href = 'admin-dashboard.html';
-                            return; // STOP HERE, do not call Firebase
+                            return;
                         }
                     }
+
+                    console.log("Attempting login for:", email);
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    console.log("Login successful, user:", userCredential.user.email);
                     
-                    await signInWithEmailAndPassword(auth, email, password);
                     document.getElementById('login-modal').style.display = 'none';
+                    
+                    // Force a redirect if the onAuthStateChanged doesn't do it quickly
+                    setTimeout(() => {
+                        const currentPath = window.location.pathname;
+                        if (currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('login.html')) {
+                            console.log("Forcing redirect after login timeout...");
+                            window.location.href = 'dashboard.html';
+                        }
+                    }, 1000);
                 }
             } catch (error) {
-                console.error(error);
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                    alert("Account not found. Please register first.");
+                console.error("Auth/Login Error:", error);
+                if (error.code && error.code.startsWith('auth/')) {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                        alert("Invalid email or password. Please try again.");
+                    } else {
+                        alert(`Login failed: ${error.message}`);
+                    }
                 } else {
-                    alert(error.message);
+                    handleFirestoreError(error, isRegister ? "Registration" : "Login Redirect");
                 }
             }
         });
@@ -326,8 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 addDocForm.reset();
                 loadAdminDoctorsList(); // Reload list
             } catch (error) {
-                console.error("Error adding doctor:", error);
-                alert("Failed to add doctor: " + error.message);
+                handleFirestoreError(error, "Adding Doctor");
             }
         });
     }
@@ -378,161 +405,180 @@ async function loadDoctorsList() {
             list.appendChild(card);
         });
     } catch (e) {
-        console.error("Error loading doctors:", e);
+        handleFirestoreError(e, "Loading Doctors List");
+        if (list) list.innerHTML = '<p style="color: var(--danger);">Failed to load specialists. Please check your Firestore rules.</p>';
     }
 }
 
 async function loadPatientDashboard() {
-    // Populate Doctor Select
-    const select = document.getElementById('doctor-select');
-    if (!select) return; // Prevent error if element not found (e.g. on wrong page)
+    try {
+        // Populate Doctor Select
+        const select = document.getElementById('doctor-select');
+        if (!select) return; // Prevent error if element not found (e.g. on wrong page)
 
-    const q = query(collection(db, "doctors"));
-    const querySnapshot = await getDocs(q);
-    
-    select.innerHTML = '<option value="">Choose a Doctor...</option>';
-    
-    // Store doctor fees in a map for easy lookup
-    const doctorFees = {};
-
-    querySnapshot.forEach((doc) => {
-        const d = doc.data();
-        const opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.innerText = `Dr. ${d.name} (${d.specialization})`;
-        select.appendChild(opt);
-        doctorFees[doc.id] = d.fee;
-    });
-
-    // Update Price on Selection
-    const priceDisplay = document.getElementById('price-display');
-    select.addEventListener('change', () => {
-        const fee = doctorFees[select.value] || 0;
-        priceDisplay.innerText = `₹${fee}`;
-    });
-
-    // Handle Booking
-    document.getElementById('booking-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        const q = query(collection(db, "doctors"));
+        const querySnapshot = await getDocs(q);
         
-        // Fetch user mobile first
-        let userMobile = '';
-        try {
-             const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-             if (userDoc.exists()) {
-                 userMobile = userDoc.data().mobile || '';
-             }
-        } catch (e) {
-            console.error("Error fetching user mobile:", e);
-        }
-
-        const doctorId = select.value;
-        const fee = doctorFees[doctorId];
+        select.innerHTML = '<option value="">Choose a Doctor...</option>';
         
-        if (!fee) {
-            alert("Please select a valid doctor.");
-            return;
-        }
+        // Store doctor fees in a map for easy lookup
+        const doctorFees = {};
 
-        // Proceed to Payment
-        const options = {
-            "key": "rzp_test_SSfp12Cb8nW2sO",
-            "amount": fee * 100, // Amount in paise
-            "currency": "INR",
-            "name": "MedCare Hospital",
-            "description": "Consultation Fee",
-            "handler": async function (response) {
-                // Payment Success - Book Appointment
-                try {
-                    await addDoc(collection(db, "appointments"), {
-                        patientId: currentUser.uid,
-                        patientName: currentUser.displayName || currentUser.email.split('@')[0],
-                        mobile: userMobile,
-                        doctorId: doctorId,
-                        doctorName: select.options[select.selectedIndex].text.split(' (')[0].replace('Dr. ', ''),
-                        date: document.getElementById('date').value,
-                        time: document.getElementById('time').value,
-                        status: 'pending',
-                        paymentId: response.razorpay_payment_id,
-                        paymentStatus: 'paid',
-                        fee: fee,
-                        createdAt: new Date().toISOString()
-                    });
-                    
-                    alert("Payment Successful! Appointment Booked.");
-                    window.location.reload();
-                } catch (error) {
-                    console.error("Booking Error:", error);
-                    alert("Payment successful but booking failed. Contact support.");
-                }
-            },
-            "prefill": {
-                "name": currentUser.displayName || currentUser.email.split('@')[0],
-                "email": currentUser.email,
-                "contact": userMobile
-            },
-            "theme": {
-                "color": "#6e8efb"
-            }
-        };
-
-        const rzp1 = new Razorpay(options);
-        rzp1.on('payment.failed', function (response){
-                alert("Payment Failed: " + response.error.description);
+        querySnapshot.forEach((doc) => {
+            const d = doc.data();
+            const opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.innerText = `Dr. ${d.name} (${d.specialization})`;
+            select.appendChild(opt);
+            doctorFees[doc.id] = d.fee;
         });
-        rzp1.open();
-    });
+
+        // Update Price on Selection
+        const priceDisplay = document.getElementById('price-display');
+        select.addEventListener('change', () => {
+            const fee = doctorFees[select.value] || 0;
+            priceDisplay.innerText = `₹${fee}`;
+        });
+
+        // Handle Booking
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Fetch user mobile first
+            let userMobile = '';
+            try {
+                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+                 if (userDoc.exists()) {
+                     userMobile = userDoc.data().mobile || '';
+                 }
+            } catch (e) {
+                console.error("Error fetching user mobile:", e);
+            }
+
+            const doctorId = select.value;
+            const fee = doctorFees[doctorId];
+            
+            if (!fee) {
+                alert("Please select a valid doctor.");
+                return;
+            }
+
+            // Proceed to Payment
+            const options = {
+                "key": "rzp_test_SSfp12Cb8nW2sO",
+                "amount": fee * 100, // Amount in paise
+                "currency": "INR",
+                "name": "MedCare Hospital",
+                "description": "Consultation Fee",
+                "handler": async function (response) {
+                    // Payment Success - Book Appointment
+                    try {
+                        await addDoc(collection(db, "appointments"), {
+                            patientId: currentUser.uid,
+                            patientName: currentUser.displayName || currentUser.email.split('@')[0],
+                            mobile: userMobile,
+                            doctorId: doctorId,
+                            doctorName: select.options[select.selectedIndex].text.split(' (')[0].replace('Dr. ', ''),
+                            date: document.getElementById('date').value,
+                            time: document.getElementById('time').value,
+                            status: 'pending',
+                            paymentId: response.razorpay_payment_id,
+                            paymentStatus: 'paid',
+                            fee: fee,
+                            createdAt: new Date().toISOString()
+                        });
+                        
+                        alert("Payment Successful! Appointment Booked.");
+                        window.location.reload();
+                    } catch (error) {
+                        handleFirestoreError(error, "Booking Appointment");
+                    }
+                },
+                "prefill": {
+                    "name": currentUser.displayName || currentUser.email.split('@')[0],
+                    "email": currentUser.email,
+                    "contact": userMobile
+                },
+                "theme": {
+                    "color": "#6e8efb"
+                }
+            };
+
+            const rzp1 = new Razorpay(options);
+            rzp1.on('payment.failed', function (response){
+                    alert("Payment Failed: " + response.error.description);
+            });
+            rzp1.open();
+        });
+    } catch (e) {
+        handleFirestoreError(e, "Patient Dashboard Init");
+    }
 
     loadMyAppointments();
 }
 
 async function loadMyAppointments() {
-    const list = document.getElementById('appointments-list');
-    const q = query(collection(db, "appointments"), where("patientId", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
-    
-    list.innerHTML = '';
-    querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>Dr. ${data.doctorName}</td>
-            <td>${data.date}</td>
-            <td>${data.time}</td>
-            <td><span class="status-badge status-${data.status}">${data.status}</span></td>
-            <td>
-                ${data.status === 'pending' ? '<button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Cancel</button>' : '-'}
-            </td>
-        `;
-        list.appendChild(row);
-    });
+    try {
+        const list = document.getElementById('appointments-list');
+        if (!list) return;
+
+        const q = query(collection(db, "appointments"), where("patientId", "==", currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        list.innerHTML = '';
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>Dr. ${data.doctorName}</td>
+                <td>${data.date}</td>
+                <td>${data.time}</td>
+                <td><span class="status-badge status-${data.status}">${data.status}</span></td>
+                <td>
+                    ${data.status === 'pending' ? '<button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Cancel</button>' : '-'}
+                </td>
+            `;
+            list.appendChild(row);
+        });
+    } catch (e) {
+        handleFirestoreError(e, "Loading My Appointments");
+    }
 }
 
 async function loadDoctorDashboard() {
-    document.getElementById('doctor-name').innerText = (await getDoc(doc(db, "users", currentUser.uid))).data().name;
-    
-    const list = document.getElementById('doctor-appointments-list');
-    const q = query(collection(db, "appointments"), where("doctorId", "==", currentUser.uid));
-    const querySnapshot = await getDocs(q);
-    
-    list.innerHTML = '';
-    querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${data.patientName}</td>
-            <td>${data.date}</td>
-            <td>${data.time}</td>
-            <td><span class="status-badge status-${data.status}">${data.status}</span></td>
-            <td>
-                ${data.status === 'pending' ? `
-                    <button onclick="updateStatus('${docSnap.id}', 'approved')" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--success);">Approve</button>
-                    <button onclick="updateStatus('${docSnap.id}', 'rejected')" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--danger);">Reject</button>
-                ` : '-'}
-            </td>
-        `;
-        list.appendChild(row);
-    });
+    try {
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+            document.getElementById('doctor-name').innerText = userDoc.data().name;
+        }
+        
+        const list = document.getElementById('doctor-appointments-list');
+        if (!list) return;
+
+        const q = query(collection(db, "appointments"), where("doctorId", "==", currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        list.innerHTML = '';
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${data.patientName}</td>
+                <td>${data.date}</td>
+                <td>${data.time}</td>
+                <td><span class="status-badge status-${data.status}">${data.status}</span></td>
+                <td>
+                    ${data.status === 'pending' ? `
+                        <button onclick="updateStatus('${docSnap.id}', 'approved')" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--success);">Approve</button>
+                        <button onclick="updateStatus('${docSnap.id}', 'rejected')" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--danger);">Reject</button>
+                    ` : '-'}
+                </td>
+            `;
+            list.appendChild(row);
+        });
+    } catch (e) {
+        handleFirestoreError(e, "Doctor Dashboard Init");
+    }
 }
 
 async function loadAdminDashboard() {
@@ -591,11 +637,10 @@ async function loadAdminDashboard() {
                 loadAdminDoctorsList();
 
             } catch (e) {
-                console.error("Error loading admin dashboard:", e);
+                handleFirestoreError(e, "Loading Admin Dashboard");
         document.getElementById('total-appointments').innerText = '0';
         document.getElementById('pending-appointments').innerText = '0';
         document.getElementById('total-doctors').innerText = '0';
-        alert("Error loading dashboard data. Check console.");
     }
 }
 
@@ -606,8 +651,7 @@ window.updateStatus = async (id, status) => {
         alert(`Appointment ${status}`);
         location.reload();
     } catch (e) {
-        console.error(e);
-        alert("Error updating status");
+        handleFirestoreError(e, "Updating Status");
     }
 };
 
@@ -618,8 +662,12 @@ async function seedDoctors() {
         { name: "John Smith", specialization: "Pediatrician", fee: 800 }
     ];
     
-    for (const d of doctors) {
-        await addDoc(collection(db, "doctors"), d);
+    try {
+        for (const d of doctors) {
+            await addDoc(collection(db, "doctors"), d);
+        }
+        console.log("Seeded doctors");
+    } catch (e) {
+        handleFirestoreError(e, "Seeding Doctors");
     }
-    console.log("Seeded doctors");
 }
